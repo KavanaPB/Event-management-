@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="eventApp">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎊 Event Management System 🎉</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(45deg, #87CEEB, #32CD32);
+            text-align: center;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 60%;
+            margin: auto;
+            background: linear-gradient(45deg, #E0FFFF, #98FB98);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.3);
+            margin-top: 50px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: #ffffff;
+            border-radius: 10px;
+            color: black;
+        }
+        table, th, td {
+            border: 1px solid #32CD32;
+        }
+        th, td {
+            padding: 10px;
+            text-align: center;
+        }
+        .btn {
+            padding: 10px 15px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            color: white;
+        }
+        .btn-add { background-color: #32CD32; color: black; }
+        .btn-delete { background-color: #FF6347; }
+        .btn-clear { background-color: #FF4500; }
+    </style>
+</head>
+<body ng-controller="EventController">
+    <div class="container">
+        <h1 style="color: #000000;">🎉 Event Management System 🎊</h1>
+        <input type="text" ng-model="eventName" placeholder="🎭 Enter Event Name">
+        <input type="date" ng-model="eventDate">
+        <button class="btn btn-add" ng-click="addEvent()">➕ Add Event</button>
+        <button class="btn btn-clear" ng-click="clearAllEvents()">🗑️ Clear All Events</button>
+        
+        <table>
+            <tr style="background: #32CD32; color: black;">
+                <th>🎈 Event Name</th>
+                <th>📅 Date</th>
+                <th>⏳ Days Left</th>
+                <th>🛠️ Action</th>
+            </tr>
+            <tr ng-repeat="event in events | orderBy:'date' track by $index">
+                <td>🎊 {{ event.name }}</td>
+                <td>📆 {{ formatDate(event.date) }}</td>
+                <td>⏳ {{ getCountdown(event.date) }} days</td>
+                <td><button class="btn btn-delete" ng-click="removeEvent($index)">❌ Delete</button></td>
+            </tr>
+        </table>
+    </div>
+
+    <script>
+        var app = angular.module('eventApp', []);
+        app.controller('EventController', function($scope) {
+            $scope.events = JSON.parse(localStorage.getItem('events')) || [];
+
+            $scope.addEvent = function() {
+                if (!$scope.eventName || !$scope.eventDate) {
+                    Swal.fire('❌ Error', 'Please fill in all fields!', 'error');
+                    return;
+                }
+                $scope.events.push({ name: $scope.eventName, date: $scope.eventDate });
+                $scope.events.sort((a, b) => new Date(a.date) - new Date(b.date));
+                localStorage.setItem('events', JSON.stringify($scope.events));
+                $scope.eventName = '';
+                $scope.eventDate = '';
+                $scope.checkEventReminder();
+                $scope.checkExpiredEvents();
+            };
+
+            $scope.removeEvent = function(index) {
+                $scope.events.splice(index, 1);
+                localStorage.setItem('events', JSON.stringify($scope.events));
+            };
+
+            $scope.clearAllEvents = function() {
+                Swal.fire({
+                    title: '⚠️ Are you sure?',
+                    text: 'This will delete all events!',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Yes, delete all!',
+                    cancelButtonText: 'No, keep them'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $scope.$apply(() => {
+                            $scope.events = [];
+                            localStorage.removeItem('events');
+                        });
+                        Swal.fire('✅ Deleted!', 'All events have been removed.', 'success');
+                    }
+                });
+            };
+
+            $scope.getCountdown = function(date) {
+                const eventDate = new Date(date);
+                const today = new Date();
+                const timeDiff = eventDate - today;
+                return Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+            };
+
+            $scope.formatDate = function(dateString) {
+                const options = { year: 'numeric', month: 'long', day: 'numeric' };
+                return new Date(dateString).toLocaleDateString(undefined, options);
+            };
+
+            $scope.checkEventReminder = function() {
+                const today = new Date().toISOString().split('T')[0];
+                $scope.events.forEach(event => {
+                    if (event.date === today) {
+                        Swal.fire({
+                            title: "🎉 Reminder!",
+                            text: `Today is the event: ${event.name}`,
+                            icon: "info",
+                            confirmButtonText: "OK"
+                        });
+                    }
+                });
+            };
+
+            $scope.checkExpiredEvents = function() {
+                const today = new Date().toISOString().split('T')[0];
+                $scope.events.forEach((event, index) => {
+                    if (event.date < today) {
+                        Swal.fire({
+                            title: "Event Expired!",
+                            text: `The event "${event.name}" has passed. Do you want to delete it?`,
+                            icon: "warning",
+                            showCancelButton: true,
+                            confirmButtonText: "Yes, delete",
+                            cancelButtonText: "No, keep it"
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                $scope.$apply(() => $scope.removeEvent(index));
+                            }
+                        });
+                    }
+                });
+            };
+
+            $scope.checkEventReminder();
+            $scope.checkExpiredEvents();
+        });
+    </script>
+</body>
+</html>
