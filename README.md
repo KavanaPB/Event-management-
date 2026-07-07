@@ -112,6 +112,9 @@ Updated Event Dashboard
 ```
 
 ---
+## 🌐 Live Demo
+
+🔗 https://kavanapb.github.io/Event-management/
 
 ## 📸 Application Screenshots
 
